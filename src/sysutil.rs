@@ -312,13 +312,6 @@ impl SysUtil {
         Ok(sessions)
     }
 
-    /// Get the mapping of a user's full name to their system username.
-    ///
-    /// If the full name is not available, their system username is used.
-    pub fn get_users(&self) -> &UserMap {
-        &self.users
-    }
-
     /// Get the mapping of a system username to their shell.
     pub fn get_shells(&self) -> &ShellMap {
         &self.shells

@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use greetd_ipc::{AuthMessageType, ErrorType, Response};
+use gtk4::glib::GString;
 use relm4::{
     gtk::{
         gdk::{Display, Monitor},
@@ -55,20 +56,14 @@ pub(super) struct Updates {
     pub(super) manual_sess_mode: bool,
     /// Input prompt sent by greetd for text input
     pub(super) input_prompt: String,
-    /// Whether the user is currently entering a secret, something visible or nothing
-    pub(super) input_mode: InputMode,
     /// ID of the active session
     pub(super) active_session_id: Option<String>,
+    /// Date that is displayed
+    pub(super) date: String,
     /// Time that is displayed
     pub(super) time: String,
     /// Monitor where the window is displayed
     pub(super) monitor: Option<Monitor>,
-}
-
-impl Updates {
-    pub(super) fn is_input(&self) -> bool {
-        self.input_mode != InputMode::None
-    }
 }
 
 /// Capitalize the first letter of the string.
@@ -104,10 +99,10 @@ impl Greeter {
             input: String::new(),
             manual_user_mode: false,
             manual_sess_mode: false,
-            input_mode: InputMode::None,
             input_prompt: String::new(),
             active_session_id: None,
             tracker: 0,
+            date: "".to_string(),
             time: "".to_string(),
             monitor: None,
         };
@@ -116,15 +111,26 @@ impl Greeter {
                 .await
                 .expect("Couldn't initialize greetd client"),
         ));
-        Self {
+        let sysutil = SysUtil::new().expect("Couldn't read available users and sessions");
+        let default_user: String = sysutil.get_shells().keys().next().unwrap().to_string();
+        let default_session: String = sysutil.get_sessions().keys().next().unwrap().to_string();
+        let sess_info = Some(UserSessInfo {
+            user_id: None,
+            user_text: GString::from(default_user),
+            sess_id: None,
+            sess_text: GString::from(default_session),
+        });
+        let mut greeter = Self {
             greetd_client,
-            sys_util: SysUtil::new().expect("Couldn't read available users and sessions"),
+            sys_util: sysutil,
             cache: Cache::new(),
-            sess_info: None,
+            sess_info: sess_info,
             config,
             updates,
             demo,
-        }
+        };
+        greeter.create_session().await;
+        greeter
     }
 
     /// Make the greeter full screen over the first monitor.
@@ -221,12 +227,11 @@ impl Greeter {
             warn!("Couldn't cancel greetd session: {err}");
         };
         self.updates.set_input(String::new());
-        self.updates.set_input_mode(InputMode::None);
         self.updates.set_message(self.config.get_default_message())
     }
 
     /// Create a greetd session, i.e. start a login attempt for the current user.
-    async fn create_session(&mut self, sender: &AsyncComponentSender<Self>) {
+    async fn create_session(&mut self) {
         let username = if let Some(username) = self.get_current_username() {
             username
         } else {
@@ -240,11 +245,7 @@ impl Greeter {
             let info = self.sess_info.as_ref().expect("No session info set yet");
             if shlex::split(info.sess_text.as_str()).is_none() {
                 // This must be an invalid command.
-                self.display_error(
-                    sender,
-                    "Invalid session command",
-                    &format!("Invalid session command: {}", info.sess_text),
-                );
+                println!("Invalid session command: {}", info.sess_text);
                 return;
             };
             debug!("Manually entered session command is parsable");
@@ -262,8 +263,7 @@ impl Greeter {
             .unwrap_or_else(|err| {
                 panic!("Failed to create session for username '{username}': {err}",)
             });
-
-        self.handle_greetd_response(sender, response).await;
+        info!("Response: {:?}", response);
     }
 
     /// This function handles a greetd response as follows:
@@ -301,7 +301,6 @@ impl Greeter {
                         // Greetd has requested input that should be hidden
                         // e.g.: a password
                         info!("greetd asks for a secret auth input: {auth_message}");
-                        self.updates.set_input_mode(InputMode::Secret);
                         self.updates.set_input(String::new());
                         self.updates
                             .set_input_prompt(auth_message.trim_end().to_string());
@@ -310,7 +309,6 @@ impl Greeter {
                     AuthMessageType::Visible => {
                         // Greetd has requested input that need not be hidden
                         info!("greetd asks for a visible auth input: {auth_message}");
-                        self.updates.set_input_mode(InputMode::Visible);
                         self.updates.set_input(String::new());
                         self.updates
                             .set_input_prompt(auth_message.trim_end().to_string());
@@ -320,12 +318,10 @@ impl Greeter {
                         // Greetd has sent an info message that should be displayed
                         // e.g.: asking for a fingerprint
                         info!("greetd sent an info: {auth_message}");
-                        self.updates.set_input_mode(InputMode::None);
                         self.updates.set_message(auth_message);
                     }
                     AuthMessageType::Error => {
                         // Greetd has sent an error message that should be displayed and logged
-                        self.updates.set_input_mode(InputMode::None);
                         // Reset outdated info message, if any
                         self.updates.set_message(self.config.get_default_message());
                         self.display_error(
@@ -415,7 +411,8 @@ impl Greeter {
                 self.send_input(sender, input).await;
             }
             AuthStatus::NotStarted => {
-                self.create_session(sender).await;
+                self.create_session().await;
+                self.send_input(sender, input).await;
             }
         };
     }
@@ -440,20 +437,7 @@ impl Greeter {
     /// Get the currently selected username.
     fn get_current_username(&self) -> Option<String> {
         let info = self.sess_info.as_ref().expect("No session info set yet");
-        if self.updates.manual_user_mode {
-            debug!(
-                "Retrieved username '{}' through manual entry",
-                info.user_text
-            );
-            Some(info.user_text.to_string())
-        } else if let Some(username) = &info.user_id {
-            // Get the currently selected user's ID, which should be their username.
-            debug!("Retrieved username '{username}' from options");
-            Some(username.to_string())
-        } else {
-            error!("No username entered");
-            None
-        }
+        Some(info.user_text.to_string())
     }
 
     /// Get the currently selected session name (if available) and command.
@@ -462,49 +446,20 @@ impl Greeter {
         sender: &AsyncComponentSender<Self>,
     ) -> (Option<String>, Option<Vec<String>>) {
         let info = self.sess_info.as_ref().expect("No session info set yet");
-        if self.updates.manual_sess_mode {
-            debug!(
-                "Retrieved session command '{}' through manual entry",
-                info.sess_text
-            );
-            if let Some(cmd) = shlex::split(info.sess_text.as_str()) {
-                (None, Some(cmd))
-            } else {
-                // This must be an invalid command.
-                self.display_error(
-                    sender,
-                    "Invalid session command",
-                    &format!("Invalid session command: {}", info.sess_text),
-                );
-                (None, None)
-            }
-        } else if let Some(session) = &info.sess_id {
-            // Get the currently selected session.
-            debug!("Retrieved current session: {session}");
-            if let Some(cmd) = self.sys_util.get_sessions().get(session.as_str()) {
-                (Some(session.to_string()), Some(cmd.clone()))
-            } else {
-                // Shouldn't happen, unless there are no sessions available.
-                let error_msg = format!("Session '{session}' not found");
-                self.display_error(sender, &error_msg, &error_msg);
-                (None, None)
-            }
+        debug!(
+            "Retrieved session command '{}' through manual entry",
+            info.sess_text
+        );
+        if let Some(cmd) = shlex::split(info.sess_text.as_str()) {
+            (None, Some(cmd))
         } else {
-            let username = if let Some(username) = self.get_current_username() {
-                username
-            } else {
-                // This shouldn't happen, because a session should've been created with a username.
-                unimplemented!("Trying to create session without a username");
-            };
-            warn!("No entry found; using default login shell of user: {username}",);
-            if let Some(cmd) = self.sys_util.get_shells().get(username.as_str()) {
-                (None, Some(cmd.clone()))
-            } else {
-                // No login shell exists.
-                let error_msg = "No session or login shell found";
-                self.display_error(sender, error_msg, error_msg);
-                (None, None)
-            }
+            // This must be an invalid command.
+            self.display_error(
+                sender,
+                "Invalid session command",
+                &format!("Invalid session command: {}", info.sess_text),
+            );
+            (None, None)
         }
     }
 

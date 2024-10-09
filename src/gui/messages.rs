@@ -6,7 +6,7 @@
 
 use derivative::Derivative;
 use greetd_ipc::Response;
-use relm4::gtk::{glib::GString, prelude::*, ComboBoxText, Entry};
+use relm4::gtk::glib::GString;
 
 #[derive(Debug)]
 /// Info about the current user and chosen session
@@ -21,23 +21,6 @@ pub struct UserSessInfo {
     pub(super) sess_text: GString,
 }
 
-impl UserSessInfo {
-    /// Extract session and user info from the relevant widgets.
-    pub(super) fn extract(
-        usernames_box: &ComboBoxText,
-        username_entry: &Entry,
-        sessions_box: &ComboBoxText,
-        session_entry: &Entry,
-    ) -> Self {
-        Self {
-            user_id: usernames_box.active_id(),
-            user_text: username_entry.text(),
-            sess_id: sessions_box.active_id(),
-            sess_text: session_entry.text(),
-        }
-    }
-}
-
 /// The messages sent by the view to the model
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -46,16 +29,7 @@ pub enum InputMsg {
     Login {
         #[derivative(Debug = "ignore")]
         input: String,
-        info: UserSessInfo,
     },
-    /// Cancel the login request
-    Cancel,
-    /// The current user was changed in the GUI.
-    UserChanged(UserSessInfo),
-    /// Toggle manual entry of user.
-    ToggleManualUser,
-    /// Toggle manual entry of session.
-    ToggleManualSess,
     Reboot,
     PowerOff,
 }
