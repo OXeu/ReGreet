@@ -13,7 +13,16 @@ impl WidgetTemplate for EndButton {
     view! {
         gtk::Button {
             set_focusable: true,
-            add_css_class: "destructive-action",
+            inline_css: "
+            padding: 16px;
+            border-radius: 50px;
+            background-image: none;
+            background-color: #6e7acc;
+            color: white;
+            outline-color: #515c88;
+            border: none;
+            font-size: 24px;
+            ",
         }
     }
 }
@@ -42,7 +51,7 @@ impl WidgetTemplate for Ui {
             add_overlay = &gtk::Frame {
                 set_halign: gtk::Align::Center,
                 set_valign: gtk::Align::End,
-                set_margin_bottom: 100,
+                set_margin_bottom: 120,
                 inline_css: "background-color: transparent; border: none;",
 
                 gtk::Box {
@@ -56,14 +65,14 @@ impl WidgetTemplate for Ui {
                     #[name = "secret_entry"]
                     gtk::PasswordEntry {
                         set_show_peek_icon: true,
-                        set_width_request: 125,
-                        set_height_request: 32,
+                        set_width_request: 300,
+                        set_height_request: 50,
                         set_halign: gtk::Align::Center,
                         inline_css: "
-                        outline: 3px solid rgba(35, 51, 113, 1);
-                        border-radius: 16px;
+                        outline-color: #515c88;
+                        border-radius: 25px;
                         background-color: rgba(229, 215, 230, 1);
-                        padding: 0px 16px 0px 16px;
+                        padding: 0px 25px 0px 25px;
                         font-size: 16px;
                         ",
                      },
@@ -73,7 +82,7 @@ impl WidgetTemplate for Ui {
             add_overlay = &gtk::Frame {
                 set_halign: gtk::Align::Center,
                 set_valign: gtk::Align::End,
-                set_margin_bottom: 80,
+                set_margin_bottom: 200,
                 inline_css: "background-color: transparent; border: none;",
 
                 /// Notification bar for error messages
@@ -90,10 +99,10 @@ impl WidgetTemplate for Ui {
                         set_halign: gtk::Align::Center,
                         inline_css: "
                         color: white;
-                        background-color: rgba(35, 51, 113, 1);
+                        background-color: #6e7acc;
                         border-radius: 40px;
-                        font-size: 10px;
-                        padding: 8px;
+                        font-size: 16px;
+                        padding: 12px;
                         ",
                     },
                 },
@@ -108,7 +117,7 @@ impl WidgetTemplate for Ui {
                 // Make it fit cleanly onto the top edge of the screen.
                 inline_css: "
                     border: none;
-                    color: rgba(35, 51, 113, 1);
+                    color: #6e7acc;
                     background-color: transparent;
                 ",
 
@@ -117,7 +126,7 @@ impl WidgetTemplate for Ui {
                 gtk::Label {
                     set_use_markup: true,
                     inline_css: "
-                    font-size: 28px;
+                    font-size: 34px;
                     font-family: JetbrainsMono Nerd Font;
                     "
                  },
@@ -126,7 +135,7 @@ impl WidgetTemplate for Ui {
                 gtk::Label {
                     set_use_markup: true,
                     inline_css: "
-                    font-size: 77px;
+                    font-size: 94px;
                     font-family: JetbrainsMono Nerd Font;
                     "
                  },
@@ -151,11 +160,6 @@ impl WidgetTemplate for Ui {
                     #[template]
                     EndButton {
                          set_label: "Reboot",
-                         inline_css: "
-                         border: none;
-                         border-radius: 20px;
-                         font-size: 16px;
-                         ",
                     },
 
                     /// Button to power-off
@@ -163,11 +167,6 @@ impl WidgetTemplate for Ui {
                     #[template]
                     EndButton {
                         set_label: "Power Off",
-                        inline_css: "
-                        border: none;
-                        border-radius: 20px;
-                        font-size: 16px;
-                        ",
                  },
                 },
             },
