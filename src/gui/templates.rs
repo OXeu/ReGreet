@@ -45,17 +45,16 @@ impl WidgetTemplate for Ui {
                 set_margin_bottom: 100,
                 inline_css: "background-color: transparent; border: none;",
 
-                gtk::Grid {
-                    set_column_spacing: 15,
+                gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
                     set_margin_bottom: 15,
                     set_margin_end: 15,
                     set_margin_start: 15,
                     set_margin_top: 15,
-                    set_row_spacing: 15,
 
                     /// Widget where the user enters a secret
                     #[name = "secret_entry"]
-                    attach[0, 0, 1, 1] = &gtk::PasswordEntry {
+                    gtk::PasswordEntry {
                         set_show_peek_icon: true,
                         set_width_request: 125,
                         set_height_request: 32,
@@ -68,6 +67,35 @@ impl WidgetTemplate for Ui {
                         font-size: 16px;
                         ",
                      },
+                },
+            },
+
+            add_overlay = &gtk::Frame {
+                set_halign: gtk::Align::Center,
+                set_valign: gtk::Align::End,
+                set_margin_bottom: 80,
+                inline_css: "background-color: transparent; border: none;",
+
+                /// Notification bar for error messages
+                #[name = "error_info"]
+                gtk::Box {
+                    // During init, the info bar closing animation is shown. To hide that, make
+                    // it invisible. Later, the code will permanently make it visible, so that
+                    // `InfoBar::set_revealed` will work properly with animations.
+                    set_visible: false,
+
+                    /// The actual error message
+                    #[name = "error_label"]
+                    gtk::Label {
+                        set_halign: gtk::Align::Center,
+                        inline_css: "
+                        color: white;
+                        background-color: rgba(35, 51, 113, 1);
+                        border-radius: 40px;
+                        font-size: 10px;
+                        padding: 8px;
+                        ",
+                    },
                 },
             },
 
@@ -111,30 +139,6 @@ impl WidgetTemplate for Ui {
                 set_valign: gtk::Align::End,
                 set_margin_bottom: 15,
                 set_spacing: 15,
-
-
-                /// Notification bar for error messages
-                #[name = "error_info"]
-                gtk::InfoBar {
-                    // During init, the info bar closing animation is shown. To hide that, make
-                    // it invisible. Later, the code will permanently make it visible, so that
-                    // `InfoBar::set_revealed` will work properly with animations.
-                    set_visible: false,
-                    set_margin_bottom: 200,
-                    set_message_type: gtk::MessageType::Error,
-
-                    /// The actual error message
-                    #[name = "error_label"]
-                    gtk::Label {
-                        set_halign: gtk::Align::Center,
-                        set_margin_top: 10,
-                        set_margin_bottom: 10,
-                        set_margin_start: 10,
-                        set_margin_end: 10,
-                        inline_css: "
-                        ",
-                    },
-                },
 
                 /// Collection of buttons that close the greeter (eg. Reboot)
                 gtk::Box {

@@ -18,7 +18,7 @@ use relm4::{
 use tokio::time::sleep;
 
 use super::messages::{CommandMsg, InputMsg};
-use super::model::{Greeter, InputMode, Updates};
+use super::model::{Greeter, Updates};
 use super::templates::Ui;
 
 const DATE_FMT: &str = "<b>%B %-d, %A</b>";
@@ -132,7 +132,7 @@ impl AsyncComponent for Greeter {
                 #[template_child]
                 error_info {
                     #[track(model.updates.changed(Updates::error()))]
-                    set_revealed: model.updates.error.is_some(),
+                    set_visible: model.updates.error.is_some(),
                 },
                 #[template_child]
                 error_label {
@@ -166,12 +166,9 @@ impl AsyncComponent for Greeter {
         let mut model = Self::new(&input.config_path, input.demo).await;
         let widgets = view_output!();
 
-        // Make the info bar permanently visible, since it was made invisible during init. The
-        // actual visuals are controlled by `InfoBar::set_revealed`.
-        widgets.ui.error_info.set_visible(true);
-
         // cfg directives don't work inside Relm4 view! macro.
         #[cfg(feature = "gtk4_8")]
+        use crate::config::BgFit;
         widgets
             .ui
             .background

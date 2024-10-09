@@ -37,4 +37,5 @@ tracing-subscriber = { version = "0.3.16", features = ["local-time"] }
 tracker = "0.2.0"
 
 [features]
+default = ["gtk4_8"]
 gtk4_8 = ["gtk4/v4_8"]
